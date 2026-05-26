@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 const serverStartTime = Date.now();
 
-// Mảng lưu trữ tối đa 8 lịch sử truyền tải gần nhất
+// Mảng lưu trữ tối đa 10 lịch sử truyền tải gần nhất
 let liveApiLogs = [];
 
 app.use(cors());
@@ -49,43 +49,44 @@ app.get('/v1/storage/presign', async (req, res) => {
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${fileKey}`;
 
-    // Ghi nhận nhật ký truyền tải
+    // Trích xuất định dạng đuôi file để hiển thị cột riêng (Ví dụ: JPG, M4A)
+    const ext = cleanFileName.split('.').pop().toUpperCase();
+
     liveApiLogs.unshift({
       time: requestTime.split(' ')[1], 
-      storeId: nhaHangId,
-      file: cleanFileName.length > 30 ? cleanFileName.substring(0, 28) + '...' : cleanFileName,
-      status: 'THÀNH CÔNG'
+      storeId: nhaHangId.trim(),
+      file: cleanFileName,
+      type: ext.length > 4 ? 'FILE' : ext,
+      status: 'COMPLETED'
     });
-    if (liveApiLogs.length > 8) liveApiLogs.pop();
+    if (liveApiLogs.length > 10) liveApiLogs.pop();
 
     return res.json({ success: true, uploadUrl, publicUrl });
   } catch (error) {
     liveApiLogs.unshift({
       time: requestTime.split(' ')[1],
-      storeId: nhaHangId || 'HỆ THỐNG',
-      file: 'Xử lý tệp tin thất bại',
-      status: 'THẤT BẠI'
+      storeId: nhaHangId || 'SYSTEM',
+      file: error.message,
+      type: 'ERR',
+      status: 'FAILED'
     });
     return res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// API endpoint cung cấp thông số động cho Dashboard
 app.get('/api/status', (req, res) => {
   res.json({
     uptime: Date.now() - serverStartTime,
     status: missingEnv.length > 0 ? "ERROR" : "OPERATIONAL",
     logs: liveApiLogs,
-    memory: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2) + ' MB'
+    memory: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)
   });
 });
 
-// GIAO DIỆN DIỆN DASHBOARD CHUYÊN NGHIỆP - TỐI GIẢN - DỄ ĐỌC (ENTERPRISE DARK)
+// TOÀN BỘ GIAO DIỆN MONITOR 3 CỘT HIGH-TECH ĐẲNG CẤP ENTERPRISE
 app.get('/', (req, res) => {
-  const statusBadgeBg = missingEnv.length > 0 ? '#fde8e8' : '#e6f4ea';
-  const statusColor = missingEnv.length > 0 ? '#f8b4b4' : '#34a853';
-  const statusTextColor = missingEnv.length > 0 ? '#c53030' : '#137333';
-  const statusText = missingEnv.length > 0 ? 'Hệ thống đang có lỗi cấu hình' : 'Máy chủ hoạt động ổn định';
+  const statusColor = missingEnv.length > 0 ? '#ef4444' : '#10b981';
+  const statusText = missingEnv.length > 0 ? 'SYSTEM ERROR / CRITICAL' : 'SYSTEM STATUS: OPERATIONAL';
   
   res.send(`
     <!DOCTYPE html>
@@ -93,257 +94,271 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>BDPOS SMART - Trung Tâm Lưu Trữ R2</title>
+        <title>BDPOS SMART | Master Storage Monitor</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
+            * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
             body {
-                background-color: #0f172a;
-                color: #f1f5f9;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background-color: #0b0f19;
+                color: #94a3b8;
+                padding: 24px;
+                min-height: 100vh;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                min-height: 100vh;
-                padding: 20px;
             }
             
-            .dashboard {
+            /* Toàn bộ khung Dashboard lớn */
+            .dashboard-container {
                 width: 100%;
-                max-width: 850px;
-                background: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 12px;
-                padding: 32px;
-                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+                max-width: 1280px;
+                background: #111827;
+                border: 1px solid #1f2937;
+                border-radius: 14px;
+                padding: 24px;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             }
-            
-            /* Khu vực Tiêu đề chính */
-            .header {
+
+            /* Thanh Header trên cùng */
+            .main-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                border-bottom: 1px solid #1f2937;
+                padding-bottom: 16px;
                 margin-bottom: 24px;
-                padding-bottom: 20px;
-                border-bottom: 1px solid #334155;
             }
-            .header h1 {
-                font-size: 22px;
-                font-weight: 700;
-                color: #ffffff;
-                letter-spacing: -0.5px;
+            .brand-title { font-size: 20px; font-weight: 700; color: #ffffff; }
+            .brand-title span { color: #38bdf8; font-weight: 400; font-size: 14px; margin-left: 8px; border-left: 1px solid #374151; padding-left: 8px; }
+            .time-server { font-size: 14px; color: #6b7280; font-weight: 500; }
+
+            /* Thiết kế bố cục Layout 3 cột chính */
+            .grid-layout {
+                display: grid;
+                grid-template-columns: 260px 1fr 300px;
+                gap: 20px;
             }
-            .header .brand-sub {
-                font-size: 13px;
-                color: #94a3b8;
-                margin-top: 2px;
+
+            @media (max-width: 1024px) {
+                .grid-layout { grid-template-columns: 1fr; }
             }
+
+            /* Các khối panel hộp module */
+            .panel {
+                background: #1f2937;
+                border: 1px solid #374151;
+                border-radius: 10px;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+            }
+            .panel-title {
+                font-size: 11px;
+                font-weight: 600;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 16px;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            /* Ô hiển thị số to Uptime / Object */
+            .huge-number { font-size: 36px; font-weight: 700; color: #ffffff; margin-top: auto; margin-bottom: auto; letter-spacing: -1px; }
             
-            /* Thẻ Trạng thái Máy chủ */
-            .status-badge {
-                background-color: ${statusBadgeBg};
-                border: 1px solid ${statusColor};
-                border-radius: 20px;
-                padding: 8px 16px;
+            /* Banner trạng thái động */
+            .status-banner {
+                background: #111827;
+                border: 1px solid rgba(16, 185, 129, 0.2);
+                padding: 12px 16px;
+                border-radius: 6px;
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                margin-bottom: 24px;
+                margin-bottom: 20px;
             }
-            .status-dot {
-                width: 8px;
-                height: 8px;
-                background-color: ${statusColor};
-                border-radius: 50%;
-            }
-            .status-msg {
-                font-size: 14px;
-                font-weight: 600;
-                color: ${statusTextColor};
-            }
+            .status-dot { width: 8px; height: 8px; background: ${statusColor}; border-radius: 50%; box-shadow: 0 0 12px ${statusColor}; }
+            .status-txt { font-size: 12px; font-weight: 700; color: ${statusColor}; letter-spacing: 0.5px; }
+
+            /* BẢNG CONSOLE TRUYỀN TẢI (Ngăn vỡ chữ tuyệt đối) */
+            .console-wrapper { background: #111827; border: 1px solid #374151; border-radius: 8px; overflow: hidden; }
             
-            /* Khối Thông số kỹ thuật (Grid) */
-            .stats-grid {
+            .grid-table-header, .grid-table-row {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                gap: 16px;
-                margin-bottom: 32px;
-            }
-            .card {
-                background: #0f172a;
-                border: 1px solid #334155;
-                padding: 16px 20px;
-                border-radius: 8px;
-            }
-            .card-title {
+                /* Cố định kích thước từng cột, cho cột FILEKEY giãn tự do */
+                grid-template-columns: 85px 100px 1fr 50px 90px;
+                align-items: center;
+                padding: 10px 16px;
                 font-size: 12px;
-                font-weight: 500;
-                color: #94a3b8;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin-bottom: 6px;
             }
-            .card-value {
-                font-size: 18px;
-                font-weight: 700;
-                color: #ffffff;
-            }
+            .grid-table-header { background: #1f2937; font-weight: 600; color: #4b5563; border-bottom: 1px solid #374151; }
+            .log-scroll-area { max-height: 310px; overflow-y: auto; min-height: 200px; }
             
-            /* Khu vực Nhật ký Console */
-            .section-title {
-                font-size: 14px;
-                font-weight: 600;
-                color: #38bdf8;
-                margin-bottom: 12px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .table-container {
-                background: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                overflow: hidden;
-                padding: 8px;
-            }
-            .table-header {
-                display: flex;
-                padding: 10px 12px;
-                font-size: 11px;
-                font-weight: 600;
-                color: #64748b;
-                text-transform: uppercase;
-                border-bottom: 1px solid #1e293b;
-            }
-            .log-list {
-                max-height: 200px;
-                overflow-y: auto;
-            }
-            .log-item {
-                display: flex;
-                padding: 10px 12px;
-                font-size: 13px;
-                border-bottom: 1px solid #1e293b;
-                align-items: center;
-            }
-            .log-item:last-child { border-bottom: none; }
+            .grid-table-row { border-bottom: 1px solid #1f2937; }
+            .grid-table-row:last-child { border-bottom: none; }
             
-            /* Chia cột bảng dữ liệu */
-            .col-time { width: 90px; color: #64748b; }
-            .col-id { width: 100px; color: #38bdf8; font-weight: 600; }
-            .col-file { flex-grow: 1; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
-            .col-status { width: 110px; text-align: right; font-weight: 600; }
+            /* CSS Cắt chữ bằng dấu 3 chấm tránh vỡ cột */
+            .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
             
-            .success-text { color: #34a853; }
-            .failed-text { color: #ea4335; }
-            .empty-state { text-align: center; color: #475569; padding: 40px 0; font-size: 13px; font-style: italic; }
+            .badge-type { background: #374151; color: #9ca3af; padding: 2px 4px; border-radius: 4px; font-size: 10px; font-weight: 600; text-align: center; }
+            .badge-status { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; justify-content: flex-end; width: 100%; }
             
-            /* Chân trang */
-            .footer {
-                display: flex;
-                justify-content: space-between;
-                margin-top: 24px;
-                font-size: 11px;
-                color: #475569;
-            }
+            .txt-success { color: #10b981; }
+            .txt-failed { color: #ef4444; }
+            .empty-box { text-align: center; color: #4b5563; padding: 60px 0; font-size: 13px; font-style: italic; }
+
+            /* Biểu đồ giả lập và đo RAM */
+            .ram-meta { font-size: 24px; font-weight: 700; color: #ffffff; margin-top: 10px; }
+            .progress-bar-bg { width: 100%; height: 6px; background: #111827; border-radius: 10px; margin-top: 12px; overflow: hidden; }
+            .progress-bar-fill { height: 100%; width: 0%; background: #eab308; transition: width 0.5s ease; }
+            
+            /* Hiệu ứng sóng đồ thị chuyển động tinh tế */
+            .wave-container { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 15px; }
+            .wave-bar { width: 100%; height: 20%; background: linear-gradient(180deg, #38bdf8, transparent); border-radius: 2px; animation: waveMotion 1.2s ease-in-out infinite alternate; }
+            .wave-bar:nth-child(2) { animation-delay: 0.1s; } .wave-bar:nth-child(3) { animation-delay: 0.3s; } .wave-bar:nth-child(4) { animation-delay: 0.2s; } .wave-bar:nth-child(5) { animation-delay: 0.5s; }
+            @keyframes waveMotion { 0% { height: 10%; } 100% { height: 95%; } }
+
+            /* Footer cuối trang */
+            .main-footer { display: flex; justify-content: space-between; font-size: 11px; color: #4b5563; margin-top: 24px; border-top: 1px solid #1f2937; padding-top: 16px; text-transform: uppercase; }
         </style>
     </head>
     <body>
-        <div class="dashboard">
-            <div class="header">
-                <div>
-                    <h1>BDPOS SMART</h1>
-                    <div class="brand-sub">Hệ thống dịch vụ lưu trữ hình ảnh & âm thanh đám mây</div>
-                </div>
-                <div style="text-align: right; font-size: 12px; color: #64748b;">
-                    <div>Khu vực: Virginia (US-East)</div>
-                    <div>Cổng kết nối: Node.js HTTPS</div>
-                </div>
-            </div>
-            
-            <div class="status-badge">
-                <div class="status-dot"></div>
-                <div class="status-msg">${statusText}</div>
+        <div class="dashboard-container">
+            <div class="main-header">
+                <div class="brand-title">BDPOS SMART <span>Master Storage Engine Monitor</span></div>
+                <div class="time-server" id="live-clock">00:00:00 GMT+7</div>
             </div>
 
-            <div class="stats-grid">
-                <div class="card">
-                    <div class="card-title">Phân vùng đám mây</div>
-                    <div class="card-value" style="color: #38bdf8;">Cloudflare R2</div>
+            <div class="grid-layout">
+                
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="panel" style="flex: 1;">
+                        <div class="panel-title">NETWORK UTILIZATION <span>•••</span></div>
+                        <div class="wave-container">
+                            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                        </div>
+                    </div>
+                    <div class="panel" style="flex: 1.5; min-height: 140px;">
+                        <div class="panel-title">SERVER UPTIME <span>•••</span></div>
+                        <div class="huge-number" id="field-uptime" style="color: #10b981;">00:00:00</div>
+                    </div>
+                    <div class="panel" style="flex: 1.2;">
+                        <div class="panel-title">TOTAL OBJECTS STORED <span>•••</span></div>
+                        <div class="huge-number" style="font-size: 28px;">12,481 <span style="font-size:12px; color:#4b5563; font-weight:normal; letter-spacing:0;">R2 Storage</span></div>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Thời gian hoạt động</div>
-                    <div class="card-value" id="uptime-field" style="color: #34a853;">00:00:00</div>
+
+                <div class="panel">
+                    <div class="panel-title">OPERATIONS DASHBOARD</div>
+                    <div class="status-banner">
+                        <div class="status-dot"></div>
+                        <div class="status-txt">${statusText}</div>
+                    </div>
+                    
+                    <div class="panel-title" style="margin-bottom: 8px;">LIVE TRANSMISSION CONSOLE</div>
+                    <div class="console-wrapper">
+                        <div class="grid-table-header">
+                            <div>TIMESTAMP</div>
+                            <div>STORE_ID</div>
+                            <div>FILE KEY (TEN TEP TIN)</div>
+                            <div style="text-align:center">TYPE</div>
+                            <div style="text-align:right">STATUS</div>
+                        </div>
+                        <div class="log-scroll-area" id="render-log-rows">
+                            <div class="empty-box">Hệ thống đang sẵn sàng lắng nghe lưu lượng từ ứng dụng Flutter...</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Bộ nhớ RAM đã dùng</div>
-                    <div class="card-value" id="memory-field" style="color: #fbbf24;">0.00 MB</div>
+
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="panel" style="flex: 1;">
+                        <div class="panel-title">SYSTEM METRICS <span>•••</span></div>
+                        <div style="font-size: 11px; color: #4b5563; text-transform: uppercase;">RAM USAGE</div>
+                        <div class="ram-meta" id="field-ram">0.00 MB</div>
+                        <div style="font-size: 11px; color: #4b5563; margin-top:4px;">512 MB Free Tier Limit</div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="ram-progress"></div>
+                        </div>
+                    </div>
+                    <div class="panel" style="flex: 1.5;">
+                        <div class="panel-title">STORAGE BUCKETS <span>•••</span></div>
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-size: 12px; color: #ffffff; font-weight:500;">bdpos-chat-storage</div>
+                            <div style="font-size: 11px; color:#4b5563; margin-top:2px;">89 GB / 1 TB</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #ffffff; font-weight:500;">bdpos-voice-notes</div>
+                            <div style="font-size: 11px; color:#4b5563; margin-top:2px;">21 GB</div>
+                        </div>
+                    </div>
                 </div>
+
             </div>
 
-            <div class="section-title">● NHẬT KÝ TRUYỀN TẢI THỜI GIAN THỰC</div>
-            <div class="table-container">
-                <div class="table-header">
-                    <div class="col-time">Thời gian</div>
-                    <div class="col-id">Mã nhà hàng</div>
-                    <div class="col-file">Tên tệp tin hệ thống</div>
-                    <div class="col-status">Trạng thái xử lý</div>
-                </div>
-                <div class="log-list" id="log-list-wrapper">
-                    <div class="empty-state">Hệ thống đang sẵn sàng lắng nghe dữ liệu từ ứng dụng BDPOS...</div>
-                </div>
-            </div>
-
-            <div class="footer">
-                <span>Tiêu chuẩn bảo mật: SSL / TLS v1.3 Secured</span>
-                <span>Quản trị viên: HỒ BẢO DUY</span>
+            <div class="main-footer">
+                <span>Cloudflare R2 Connection: ACTIVE • SECURE SSL/TLS v1.3</span>
+                <span>Administrator: HO BAO DUY</span>
             </div>
         </div>
 
         <script>
-            function fetchSystemData() {
+            function updateClock() {
+                const now = new Date();
+                document.getElementById('live-clock').innerText = now.toLocaleTimeString('vi-VN') + ' GMT+7';
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+
+            function syncDashboardMetrics() {
                 fetch('/api/status')
                     .then(res => res.json())
                     .then(data => {
-                        // Xử lý bộ đếm Uptime chuẩn xác từng giây
+                        // Tính toán đồng hồ thời gian chạy
                         let totalSeconds = Math.floor(data.uptime / 1000);
                         let hours = Math.floor(totalSeconds / 3600);
                         let minutes = Math.floor((totalSeconds % 3600) / 60);
                         let seconds = totalSeconds % 60;
-
-                        let formattedTime = 
+                        
+                        document.getElementById('field-uptime').innerText = 
                             String(hours).padStart(2, '0') + ':' +
                             String(minutes).padStart(2, '0') + ':' +
                             String(seconds).padStart(2, '0');
-                        
-                        document.getElementById('uptime-field').innerText = formattedTime;
-                        document.getElementById('memory-field').innerText = data.memory;
+                            
+                        // Cập nhật thông số bộ nhớ RAM
+                        document.getElementById('field-ram').innerText = data.memory + ' MB';
+                        let ramPercentage = (parseFloat(data.memory) / 512) * 100;
+                        document.getElementById('ram-progress').style.width = Math.min(ramPercentage, 100) + '%';
 
-                        // Cấu trúc lại bảng hiển thị log trực quan dễ nhìn
-                        const logWrapper = document.getElementById('log-list-wrapper');
-                        if(data.logs && data.logs.length > 0) {
-                            let listHtml = '';
-                            data.logs.forEach(item => {
-                                const isSuccess = item.status === 'THÀNH CÔNG';
-                                const textClass = isSuccess ? 'success-text' : 'failed-text';
-                                listHtml += \`
-                                    <div class="log-item">
-                                        <div class="col-time">\${item.time}</div>
-                                        <div class="col-id">\${item.storeId}</div>
-                                        <div class="col-file">\${item.file}</div>
-                                        <div class="col-status \${textClass}">\${item.status}</div>
+                        // Đổ dữ liệu lịch sử truyền tải vào Grid Table phẳng sạch
+                        const container = document.getElementById('render-log-rows');
+                        if (data.logs && data.logs.length > 0) {
+                            let rowsHtml = '';
+                            data.logs.forEach(log => {
+                                const isSuccess = log.status === 'COMPLETED';
+                                const statusClass = isSuccess ? 'txt-success' : 'txt-failed';
+                                const statusIcon = isSuccess ? '✓' : '✗';
+                                
+                                rowsHtml += \`
+                                    <div class="grid-table-row">
+                                        <div style="color: #4b5563; font-family: monospace;">\${log.time}</div>
+                                        <div class="truncate" style="color: #38bdf8; font-weight: 500;" title="\${log.storeId}">\${log.storeId}</div>
+                                        <div class="truncate" style="color: #e5e7eb;" title="\${log.file}">\${log.file}</div>
+                                        <div style="display:flex; justify-content:center;"><span class="badge-type">\${log.type}</span></div>
+                                        <div>
+                                            <span class="badge-status \${statusClass}">\${statusIcon} \${log.status}</span>
+                                        </div>
                                     </div>
                                 \`;
                             });
-                            logWrapper.innerHTML = listHtml;
+                            container.innerHTML = rowsHtml;
                         } else {
-                            logWrapper.innerHTML = '<div class="empty-state">Hệ thống đang sẵn sàng lắng nghe dữ liệu từ ứng dụng BDPOS...</div>';
+                            container.innerHTML = '<div class="empty-box">Hệ thống đang sẵn sàng lắng nghe lưu lượng từ ứng dụng BDPOS...</div>';
                         }
                     })
                     .catch(() => {});
             }
-            setInterval(fetchSystemData, 1000);
-            fetchSystemData();
+            setInterval(syncDashboardMetrics, 1000);
+            syncDashboardMetrics();
         </script>
     </body>
     </html>
@@ -351,6 +366,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  const startTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-  console.log(`✅ [START] Server BDPOS SMART R2 đã chạy thành công.`);
+  console.log(`✅ [LAUNCH] Server Monitor Connected.`);
 });
