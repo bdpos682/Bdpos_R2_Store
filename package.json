@@ -1,0 +1,16 @@
+{
+  "name": "bdpos-r2-backend",
+  "version": "1.0.0",
+  "description": "Backend xử lý lưu trữ Cloudflare R2 cho BDPOS SMART",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
