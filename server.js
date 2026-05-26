@@ -25,9 +25,9 @@ const s3Client = new S3Client({
   },
 });
 
-// API sinh đường dẫn Presigned URL mã hóa
+// API sinh đường dẫn Presigned URL mã hóa - ĐÃ ĐỒNG BỘ FOLDERTYPE CHUẨN MENU
 app.get('/v1/storage/presign', async (req, res) => {
-  const { fileName, fileType, nhaHangId } = req.query;
+  const { fileName, fileType, nhaHangId, folderType } = req.query;
   const requestTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
   
   try {
@@ -36,7 +36,16 @@ app.get('/v1/storage/presign', async (req, res) => {
     }
 
     const cleanFileName = fileName.trim().replace(/\s+/g, '_');
-    const fileKey = `chat_internal/${nhaHangId.trim()}/${cleanFileName}`;
+    const cleanNhaHangId = nhaHangId.trim();
+
+    // Tự động phân loại thư mục gốc lưu trữ dựa trên cờ folderType nhận từ Flutter
+    let targetFolder = 'chat_internal';
+    if (folderType === 'menu') {
+      targetFolder = 'menu';
+    }
+
+    // Quy hoạch cây cấu trúc thư mục sạch sẽ, song song ở gốc Bucket R2
+    const fileKey = `${targetFolder}/${cleanNhaHangId}/${cleanFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
@@ -51,7 +60,7 @@ app.get('/v1/storage/presign', async (req, res) => {
 
     liveApiLogs.unshift({
       time: requestTime.split(' ')[1], 
-      storeId: nhaHangId.trim(),
+      storeId: cleanNhaHangId,
       file: cleanFileName,
       type: ext.length > 4 ? 'FILE' : ext,
       status: 'COMPLETED'
@@ -80,7 +89,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// GIAO DIỆN MONITOR CHUYÊN NGHIỆP - THÁCH THỨC MỌI MÀN HÌNH (PC, TABLET, MOBILE)
+// GIAO DIỆN MONITOR CHUYÊN NGHIỆP - ĐÃ KHỬ LỖI DÍNH CHỮ MOBILE & AUTO CARD LIST
 app.get('/', (req, res) => {
   const statusColor = missingEnv.length > 0 ? '#ef4444' : '#10b981';
   const statusText = missingEnv.length > 0 ? 'SYSTEM ERROR / CRITICAL' : 'SYSTEM STATUS: OPERATIONAL';
@@ -127,20 +136,17 @@ app.get('/', (req, res) => {
             .brand-title span { color: #38bdf8; font-weight: 400; font-size: 14px; margin-left: 8px; border-left: 1px solid #374151; padding-left: 8px; }
             .time-server { font-size: 14px; color: #6b7280; font-weight: 500; font-family: monospace; }
 
-            /* --- LAYOUT GRID ĐA NỀN TẢNG THÔNG MINH --- */
             .grid-layout {
                 display: grid;
                 grid-template-columns: 280px 1fr 280px;
                 gap: 20px;
             }
 
-            /* ĐIỀU CHỈNH CHO MÁY TÍNH BẢNG (TABLET) */
             @media (max-width: 1150px) {
                 .grid-layout { grid-template-columns: 1fr 1fr; }
                 .center-column { grid-column: span 2; order: -1; }
             }
 
-            /* ĐIỀU CHỈNH CHO ĐIỆN THOẠI (MOBILE) - CHỐNG VỠ TUYỆT ĐỐI */
             @media (max-width: 680px) {
                 body { padding: 12px; }
                 .dashboard-container { padding: 16px; border-radius: 12px; }
@@ -150,10 +156,9 @@ app.get('/', (req, res) => {
                 .time-server { font-size: 12px; }
                 .brand-title span { display: block; border-left: none; padding-left: 0; margin-left: 0; margin-top: 4px; }
                 
-                /* Chuyển đổi bảng log thành dạng danh sách thẻ (Card List) mượt mà trên mobile */
-                .grid-table-header { display: none !important; } /* Ẩn cái header bảng bị dính chữ */
+                .grid-table-header { display: none !important; }
                 .grid-table-row {
-                    grid-template-columns: 1fr !important; /* Dồn thành 1 cột */
+                    grid-template-columns: 1fr !important;
                     background: #1f2937;
                     margin-bottom: 10px;
                     border: 1px solid #374151;
@@ -201,7 +206,6 @@ app.get('/', (req, res) => {
             .status-dot { width: 8px; height: 8px; background: ${statusColor}; border-radius: 50%; box-shadow: 0 0 12px ${statusColor}; }
             .status-txt { font-size: 12px; font-weight: 700; color: ${statusColor}; letter-spacing: 0.5px; }
 
-            /* Bảng Console xử lý dữ liệu */
             .console-wrapper { background: #111827; border: 1px solid #374151; border-radius: 8px; overflow: hidden; }
             
             .grid-table-header, .grid-table-row {
@@ -347,7 +351,7 @@ app.get('/', (req, res) => {
                                 
                                 rowsHtml += \`
                                     <div class="grid-table-row">
-                                        <div class="log-cell-time" style="color: #4b5563; font-family: monospace;">\${log.time}</div>
+                                        <div class="log-cell-time" style="color: #4b5563; font-family: monospace;">\Str_${log.time}</div>
                                         <div class="log-cell-id truncate" style="color: #38bdf8; font-weight: 500;" title="\${log.storeId}">\${log.storeId}</div>
                                         <div class="log-cell-file truncate" style="color: #e5e7eb; font-family: monospace;" title="\${log.file}">\${log.file}</div>
                                         <div class="log-cell-status">
