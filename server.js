@@ -244,7 +244,7 @@ app.get('/', (req, res) => {
     <body>
         <div class="dashboard-container">
             <div class="main-header">
-                <div class="brand-title">BDPOS SMART <span>Master Storage Engine Monitor</span></div>
+                <div class="brand-title">BDPOS SMART <span>Lưu Trữ Cloudflare R2</span></div>
                 <div class="time-server" id="live-clock">00:00:00 GMT+7</div>
             </div>
 
@@ -273,9 +273,9 @@ app.get('/', (req, res) => {
                     <div class="panel-title" style="margin-bottom: 10px;">LIVE TRANSMISSION CONSOLE</div>
                     <div class="console-wrapper">
                         <div class="grid-table-header">
-                            <div>TIMESTAMP</div>
-                            <div>STORE_ID (MÃ QUÁN)</div>
-                            <div>FILE KEY (TEN TEP TIN TRUYỀN TẢI)</div>
+                            <div>THỜI GIAN</div>
+                            <div>MÃ QUÁN</div>
+                            <div>TÊN TỆP</div>
                             <div style="text-align:right">STATUS</div>
                         </div>
                         <div class="log-scroll-area" id="render-log-rows">
