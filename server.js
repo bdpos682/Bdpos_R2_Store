@@ -25,7 +25,7 @@ const s3Client = new S3Client({
   },
 });
 
-// API sinh đường dẫn Presigned URL mã hóa - ĐÃ ĐỒNG BỘ FOLDERTYPE CHUẨN MENU
+// API sinh đường dẫn Presigned URL mã hóa - PHÂN LOẠI THƯ MỤC MENU / CHAT_INTERNAL
 app.get('/v1/storage/presign', async (req, res) => {
   const { fileName, fileType, nhaHangId, folderType } = req.query;
   const requestTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
@@ -38,13 +38,13 @@ app.get('/v1/storage/presign', async (req, res) => {
     const cleanFileName = fileName.trim().replace(/\s+/g, '_');
     const cleanNhaHangId = nhaHangId.trim();
 
-    // Tự động phân loại thư mục gốc lưu trữ dựa trên cờ folderType nhận từ Flutter
+    // Phân loại thư mục lưu trữ dựa trên folderType gửi từ Flutter lên
     let targetFolder = 'chat_internal';
     if (folderType === 'menu') {
       targetFolder = 'menu';
     }
 
-    // Quy hoạch cây cấu trúc thư mục sạch sẽ, song song ở gốc Bucket R2
+    // Quy hoạch cấu trúc thư mục song song ở gốc Bucket R2
     const fileKey = `${targetFolder}/${cleanNhaHangId}/${cleanFileName}`;
 
     const command = new PutObjectCommand({
@@ -89,7 +89,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// GIAO DIỆN MONITOR CHUYÊN NGHIỆP - ĐÃ KHỬ LỖI DÍNH CHỮ MOBILE & AUTO CARD LIST
+// GIAO DIỆN MONITOR CHUYÊN NGHIỆP - ĐÃ FIX TRIỆT ĐỂ LỖI KHỞI TẠO CHUỖI TEMPLATE
 app.get('/', (req, res) => {
   const statusColor = missingEnv.length > 0 ? '#ef4444' : '#10b981';
   const statusText = missingEnv.length > 0 ? 'SYSTEM ERROR / CRITICAL' : 'SYSTEM STATUS: OPERATIONAL';
@@ -351,7 +351,7 @@ app.get('/', (req, res) => {
                                 
                                 rowsHtml += \`
                                     <div class="grid-table-row">
-                                        <div class="log-cell-time" style="color: #4b5563; font-family: monospace;">\Str_${log.time}</div>
+                                        <div class="log-cell-time" style="color: #4b5563; font-family: monospace;">\${log.time}</div>
                                         <div class="log-cell-id truncate" style="color: #38bdf8; font-weight: 500;" title="\${log.storeId}">\${log.storeId}</div>
                                         <div class="log-cell-file truncate" style="color: #e5e7eb; font-family: monospace;" title="\${log.file}">\${log.file}</div>
                                         <div class="log-cell-status">
