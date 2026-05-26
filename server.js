@@ -8,13 +8,11 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 const serverStartTime = Date.now();
 
-// Mảng lưu trữ tối đa 10 lịch sử truyền tải gần nhất
 let liveApiLogs = [];
 
 app.use(cors());
 app.use(express.json());
 
-// --- KIỂM TRA ĐẦU VÀO CẤU HÌNH HỆ THỐNG ---
 const requiredEnv = ['R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL'];
 const missingEnv = requiredEnv.filter(envName => !process.env[envName]);
 
@@ -27,7 +25,6 @@ const s3Client = new S3Client({
   },
 });
 
-// API sinh đường dẫn Presigned URL mã hóa
 app.get('/v1/storage/presign', async (req, res) => {
   const { fileName, fileType, nhaHangId } = req.query;
   const requestTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
@@ -49,7 +46,6 @@ app.get('/v1/storage/presign', async (req, res) => {
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${fileKey}`;
 
-    // Trích xuất định dạng đuôi file để hiển thị cột riêng (Ví dụ: JPG, M4A)
     const ext = cleanFileName.split('.').pop().toUpperCase();
 
     liveApiLogs.unshift({
@@ -83,7 +79,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// TOÀN BỘ GIAO DIỆN MONITOR 3 CỘT HIGH-TECH ĐẲNG CẤP ENTERPRISE
+// GIAO DIỆN MONITOR ĐA NỀN TẢNG (PC, TABLET, MOBILE RESPONSIVE 100%)
 app.get('/', (req, res) => {
   const statusColor = missingEnv.length > 0 ? '#ef4444' : '#10b981';
   const statusText = missingEnv.length > 0 ? 'SYSTEM ERROR / CRITICAL' : 'SYSTEM STATUS: OPERATIONAL';
@@ -101,14 +97,13 @@ app.get('/', (req, res) => {
             body {
                 background-color: #0b0f19;
                 color: #94a3b8;
-                padding: 24px;
+                padding: 16px;
                 min-height: 100vh;
                 display: flex;
                 justify-content: center;
                 align-items: center;
             }
             
-            /* Toàn bộ khung Dashboard lớn */
             .dashboard-container {
                 width: 100%;
                 max-width: 1280px;
@@ -119,7 +114,6 @@ app.get('/', (req, res) => {
                 box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             }
 
-            /* Thanh Header trên cùng */
             .main-header {
                 display: flex;
                 justify-content: space-between;
@@ -127,23 +121,47 @@ app.get('/', (req, res) => {
                 border-bottom: 1px solid #1f2937;
                 padding-bottom: 16px;
                 margin-bottom: 24px;
+                flex-wrap: wrap;
+                gap: 12px;
             }
             .brand-title { font-size: 20px; font-weight: 700; color: #ffffff; }
             .brand-title span { color: #38bdf8; font-weight: 400; font-size: 14px; margin-left: 8px; border-left: 1px solid #374151; padding-left: 8px; }
             .time-server { font-size: 14px; color: #6b7280; font-weight: 500; }
 
-            /* Thiết kế bố cục Layout 3 cột chính */
+            /* --- BỐ CỤC ĐÁP ỨNG RESPONSIVE THÔNG MINH --- */
             .grid-layout {
                 display: grid;
                 grid-template-columns: 260px 1fr 300px;
                 gap: 20px;
             }
 
-            @media (max-width: 1024px) {
-                .grid-layout { grid-template-columns: 1fr; }
+            /* Cấu hình cho Máy tính bảng (Tablet) */
+            @media (max-width: 1100px) {
+                .grid-layout {
+                    grid-template-columns: 1fr 1fr;
+                }
+                .center-column {
+                    grid-column: span 2;
+                    order: -1; /* Đẩy bảng logs lên đầu ở Tablet */
+                }
             }
 
-            /* Các khối panel hộp module */
+            /* Cấu hình cho Điện thoại di động (Mobile) */
+            @media (max-width: 640px) {
+                body { padding: 8px; }
+                .dashboard-container { padding: 16px; border-radius: 8px; }
+                .grid-layout { grid-template-columns: 1fr; gap: 16px; }
+                .center-column { grid-column: span 1; }
+                .main-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+                .brand-title span { display: block; border-left: none; padding-left: 0; margin-left: 0; margin-top: 4px; }
+                .huge-number { font-size: 28px; }
+                .grid-table-header, .grid-table-row {
+                    grid-template-columns: 75px 85px 1fr 65px; /* Giảm bớt 1 cột type ở mobile cho rộng */
+                    padding: 8px 10px;
+                }
+                .col-type-header, .col-type-cell { display: none !important; } /* Ẩn cột TYPE trên mobile */
+            }
+
             .panel {
                 background: #1f2937;
                 border: 1px solid #374151;
@@ -163,10 +181,8 @@ app.get('/', (req, res) => {
                 justify-content: space-between;
             }
 
-            /* Ô hiển thị số to Uptime / Object */
-            .huge-number { font-size: 36px; font-weight: 700; color: #ffffff; margin-top: auto; margin-bottom: auto; letter-spacing: -1px; }
+            .huge-number { font-size: 34px; font-weight: 700; color: #ffffff; margin-top: auto; margin-bottom: auto; letter-spacing: -1px; }
             
-            /* Banner trạng thái động */
             .status-banner {
                 background: #111827;
                 border: 1px solid rgba(16, 185, 129, 0.2);
@@ -180,24 +196,29 @@ app.get('/', (req, res) => {
             .status-dot { width: 8px; height: 8px; background: ${statusColor}; border-radius: 50%; box-shadow: 0 0 12px ${statusColor}; }
             .status-txt { font-size: 12px; font-weight: 700; color: ${statusColor}; letter-spacing: 0.5px; }
 
-            /* BẢNG CONSOLE TRUYỀN TẢI (Ngăn vỡ chữ tuyệt đối) */
-            .console-wrapper { background: #111827; border: 1px solid #374151; border-radius: 8px; overflow: hidden; }
+            /* Khung bọc bảng Log chống tràn */
+            .console-wrapper { background: #111827; border: 1px solid #374151; border-radius: 8px; overflow-x: auto; }
+            .console-content { min-width: 450px; } /* Đảm bảo chiều rộng tối thiểu không bị co quắp */
             
             .grid-table-header, .grid-table-row {
                 display: grid;
-                /* Cố định kích thước từng cột, cho cột FILEKEY giãn tự do */
-                grid-template-columns: 85px 100px 1fr 50px 90px;
+                grid-template-columns: 85px 100px 1fr 50px 85px;
                 align-items: center;
                 padding: 10px 16px;
                 font-size: 12px;
             }
+            @media (max-width: 640px) {
+                .grid-table-header, .grid-table-row {
+                    grid-template-columns: 75px 85px 1fr 65px;
+                }
+            }
+            
             .grid-table-header { background: #1f2937; font-weight: 600; color: #4b5563; border-bottom: 1px solid #374151; }
             .log-scroll-area { max-height: 310px; overflow-y: auto; min-height: 200px; }
             
             .grid-table-row { border-bottom: 1px solid #1f2937; }
             .grid-table-row:last-child { border-bottom: none; }
             
-            /* CSS Cắt chữ bằng dấu 3 chấm tránh vỡ cột */
             .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
             
             .badge-type { background: #374151; color: #9ca3af; padding: 2px 4px; border-radius: 4px; font-size: 10px; font-weight: 600; text-align: center; }
@@ -207,19 +228,16 @@ app.get('/', (req, res) => {
             .txt-failed { color: #ef4444; }
             .empty-box { text-align: center; color: #4b5563; padding: 60px 0; font-size: 13px; font-style: italic; }
 
-            /* Biểu đồ giả lập và đo RAM */
             .ram-meta { font-size: 24px; font-weight: 700; color: #ffffff; margin-top: 10px; }
             .progress-bar-bg { width: 100%; height: 6px; background: #111827; border-radius: 10px; margin-top: 12px; overflow: hidden; }
             .progress-bar-fill { height: 100%; width: 0%; background: #eab308; transition: width 0.5s ease; }
             
-            /* Hiệu ứng sóng đồ thị chuyển động tinh tế */
-            .wave-container { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 15px; }
-            .wave-bar { width: 100%; height: 20%; background: linear-gradient(180deg, #38bdf8, transparent); border-radius: 2px; animation: waveMotion 1.2s ease-in-out infinite alternate; }
+            .wave-container { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 15px; width: 100%; }
+            .wave-bar { width: 20%; height: 20%; background: linear-gradient(180deg, #38bdf8, transparent); border-radius: 2px; animation: waveMotion 1.2s ease-in-out infinite alternate; }
             .wave-bar:nth-child(2) { animation-delay: 0.1s; } .wave-bar:nth-child(3) { animation-delay: 0.3s; } .wave-bar:nth-child(4) { animation-delay: 0.2s; } .wave-bar:nth-child(5) { animation-delay: 0.5s; }
             @keyframes waveMotion { 0% { height: 10%; } 100% { height: 95%; } }
 
-            /* Footer cuối trang */
-            .main-footer { display: flex; justify-content: space-between; font-size: 11px; color: #4b5563; margin-top: 24px; border-top: 1px solid #1f2937; padding-top: 16px; text-transform: uppercase; }
+            .main-footer { display: flex; justify-content: space-between; font-size: 11px; color: #4b5563; margin-top: 24px; border-top: 1px solid #1f2937; padding-top: 16px; text-transform: uppercase; flex-wrap: wrap; gap: 8px; }
         </style>
     </head>
     <body>
@@ -238,17 +256,13 @@ app.get('/', (req, res) => {
                             <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
                         </div>
                     </div>
-                    <div class="panel" style="flex: 1.5; min-height: 140px;">
+                    <div class="panel" style="flex: 1.5; min-height: 120px;">
                         <div class="panel-title">SERVER UPTIME <span>•••</span></div>
                         <div class="huge-number" id="field-uptime" style="color: #10b981;">00:00:00</div>
                     </div>
-                    <div class="panel" style="flex: 1.2;">
-                        <div class="panel-title">TOTAL OBJECTS STORED <span>•••</span></div>
-                        <div class="huge-number" style="font-size: 28px;">12,481 <span style="font-size:12px; color:#4b5563; font-weight:normal; letter-spacing:0;">R2 Storage</span></div>
-                    </div>
                 </div>
 
-                <div class="panel">
+                <div class="panel center-column">
                     <div class="panel-title">OPERATIONS DASHBOARD</div>
                     <div class="status-banner">
                         <div class="status-dot"></div>
@@ -257,15 +271,17 @@ app.get('/', (req, res) => {
                     
                     <div class="panel-title" style="margin-bottom: 8px;">LIVE TRANSMISSION CONSOLE</div>
                     <div class="console-wrapper">
-                        <div class="grid-table-header">
-                            <div>TIMESTAMP</div>
-                            <div>STORE_ID</div>
-                            <div>FILE KEY (TEN TEP TIN)</div>
-                            <div style="text-align:center">TYPE</div>
-                            <div style="text-align:right">STATUS</div>
-                        </div>
-                        <div class="log-scroll-area" id="render-log-rows">
-                            <div class="empty-box">Hệ thống đang sẵn sàng lắng nghe lưu lượng từ ứng dụng Flutter...</div>
+                        <div class="console-content">
+                            <div class="grid-table-header">
+                                <div>TIMESTAMP</div>
+                                <div>STORE_ID</div>
+                                <div>FILE KEY (TEN TEP TIN)</div>
+                                <div class="col-type-header" style="text-align:center">TYPE</div>
+                                <div style="text-align:right">STATUS</div>
+                            </div>
+                            <div class="log-scroll-area" id="render-log-rows">
+                                <div class="empty-box">Hệ thống đang sẵn sàng lắng nghe lưu lượng từ ứng dụng BDPOS...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -275,20 +291,19 @@ app.get('/', (req, res) => {
                         <div class="panel-title">SYSTEM METRICS <span>•••</span></div>
                         <div style="font-size: 11px; color: #4b5563; text-transform: uppercase;">RAM USAGE</div>
                         <div class="ram-meta" id="field-ram">0.00 MB</div>
-                        <div style="font-size: 11px; color: #4b5563; margin-top:4px;">512 MB Free Tier Limit</div>
                         <div class="progress-bar-bg">
                             <div class="progress-bar-fill" id="ram-progress"></div>
                         </div>
                     </div>
-                    <div class="panel" style="flex: 1.5;">
+                    <div class="panel" style="flex: 1.2;">
                         <div class="panel-title">STORAGE BUCKETS <span>•••</span></div>
                         <div style="margin-bottom: 12px;">
                             <div style="font-size: 12px; color: #ffffff; font-weight:500;">bdpos-chat-storage</div>
-                            <div style="font-size: 11px; color:#4b5563; margin-top:2px;">89 GB / 1 TB</div>
+                            <div style="font-size: 11px; color:#4b5563; margin-top:2px;">Gói phân vùng: Cloudflare R2</div>
                         </div>
                         <div>
-                            <div style="font-size: 12px; color: #ffffff; font-weight:500;">bdpos-voice-notes</div>
-                            <div style="font-size: 11px; color:#4b5563; margin-top:2px;">21 GB</div>
+                            <div style="font-size: 12px; color: #ffffff; font-weight:500;">Tổng số tệp tin</div>
+                            <div style="font-size: 14px; color:#38bdf8; font-weight:bold; margin-top:2px;">12,481 Objects</div>
                         </div>
                     </div>
                 </div>
@@ -313,7 +328,6 @@ app.get('/', (req, res) => {
                 fetch('/api/status')
                     .then(res => res.json())
                     .then(data => {
-                        // Tính toán đồng hồ thời gian chạy
                         let totalSeconds = Math.floor(data.uptime / 1000);
                         let hours = Math.floor(totalSeconds / 3600);
                         let minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -324,13 +338,13 @@ app.get('/', (req, res) => {
                             String(minutes).padStart(2, '0') + ':' +
                             String(seconds).padStart(2, '0');
                             
-                        // Cập nhật thông số bộ nhớ RAM
                         document.getElementById('field-ram').innerText = data.memory + ' MB';
                         let ramPercentage = (parseFloat(data.memory) / 512) * 100;
                         document.getElementById('ram-progress').style.width = Math.min(ramPercentage, 100) + '%';
 
-                        // Đổ dữ liệu lịch sử truyền tải vào Grid Table phẳng sạch
                         const container = document.getElementById('render-log-rows');
+                        const isMobile = window.innerWidth <= 640;
+
                         if (data.logs && data.logs.length > 0) {
                             let rowsHtml = '';
                             data.logs.forEach(log => {
@@ -338,12 +352,15 @@ app.get('/', (req, res) => {
                                 const statusClass = isSuccess ? 'txt-success' : 'txt-failed';
                                 const statusIcon = isSuccess ? '✓' : '✗';
                                 
+                                // Nếu là mobile, ẩn hoàn toàn cột TYPE ra khỏi cấu trúc render DOM
+                                const typeCellHtml = isMobile ? '' : \`<div class="col-type-cell" style="display:flex; justify-content:center;"><span class="badge-type">\${log.type}</span></div>\`;
+
                                 rowsHtml += \`
                                     <div class="grid-table-row">
                                         <div style="color: #4b5563; font-family: monospace;">\${log.time}</div>
                                         <div class="truncate" style="color: #38bdf8; font-weight: 500;" title="\${log.storeId}">\${log.storeId}</div>
                                         <div class="truncate" style="color: #e5e7eb;" title="\${log.file}">\${log.file}</div>
-                                        <div style="display:flex; justify-content:center;"><span class="badge-type">\${log.type}</span></div>
+                                        \${typeCellHtml}
                                         <div>
                                             <span class="badge-status \${statusClass}">\${statusIcon} \${log.status}</span>
                                         </div>
@@ -366,5 +383,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ [LAUNCH] Server Monitor Connected.`);
+  console.log(`✅ [LAUNCH] Server Responsive Connected.`);
 });
