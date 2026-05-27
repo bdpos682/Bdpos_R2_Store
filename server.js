@@ -25,7 +25,7 @@ const s3Client = new S3Client({
   },
 });
 
-// API sinh đường dẫn Presigned URL mã hóa - PHÂN LOẠI THƯ MỤC MENU / CHAT_INTERNAL
+// API sinh đường dẫn Presigned URL mã hóa - ĐÃ FIX HOÀN CHỈNH 3 PHÂN VÙNG THƯ MỤC SONG SONG
 app.get('/v1/storage/presign', async (req, res) => {
   const { fileName, fileType, nhaHangId, folderType } = req.query;
   const requestTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
@@ -38,13 +38,15 @@ app.get('/v1/storage/presign', async (req, res) => {
     const cleanFileName = fileName.trim().replace(/\s+/g, '_');
     const cleanNhaHangId = nhaHangId.trim();
 
-    // Phân loại thư mục lưu trữ dựa trên folderType gửi từ Flutter lên
+    // Rẽ nhánh thông minh dựa trên folderType từ Flutter bắn lên
     let targetFolder = 'chat_internal';
     if (folderType === 'menu') {
       targetFolder = 'menu';
+    } else if (folderType === 'logo') {
+      targetFolder = 'logo'; // Khóa chặt luồng gom ảnh logo cửa hàng vào phân vùng riêng
     }
 
-    // Quy hoạch cấu trúc thư mục song song ở gốc Bucket R2
+    // Quy hoạch cấu trúc cây thư mục sạch sẽ song song tại gốc Bucket R2
     const fileKey = `${targetFolder}/${cleanNhaHangId}/${cleanFileName}`;
 
     const command = new PutObjectCommand({
@@ -89,7 +91,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// GIAO DIỆN MONITOR CHUYÊN NGHIỆP - ĐÃ FIX TRIỆT ĐỂ LỖI KHỞI TẠO CHUỖI TEMPLATE
+// GIAO DIỆN MONITOR CHUYÊN NGHIỆP - ĐÃ KHỬ TOÀN BỘ LỖI CHUỖI TEMPLATE SCRIPT
 app.get('/', (req, res) => {
   const statusColor = missingEnv.length > 0 ? '#ef4444' : '#10b981';
   const statusText = missingEnv.length > 0 ? 'SYSTEM ERROR / CRITICAL' : 'SYSTEM STATUS: OPERATIONAL';
