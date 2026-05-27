@@ -43,7 +43,9 @@ app.get('/v1/storage/presign', async (req, res) => {
     if (folderType === 'menu') {
       targetFolder = 'menu';
     } else if (folderType === 'logo') {
-      targetFolder = 'logo'; // Khóa chặt luồng gom ảnh logo cửa hàng vào phân vùng riêng
+      targetFolder = 'logo'; 
+    } else if (folderType === 'avatar') {
+      targetFolder = 'avatar';
     }
 
     // Quy hoạch cấu trúc cây thư mục sạch sẽ song song tại gốc Bucket R2
