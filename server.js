@@ -41,11 +41,13 @@ app.get('/v1/storage/presign', async (req, res) => {
     // Rẽ nhánh thông minh dựa trên folderType từ Flutter bắn lên
     let targetFolder = 'chat_internal';
     if (folderType === 'menu') {
-      targetFolder = 'menu';
+        targetFolder = 'menu';
     } else if (folderType === 'logo') {
-      targetFolder = 'logo'; 
+        targetFolder = 'logo'; 
     } else if (folderType === 'avatar') {
-      targetFolder = 'avatar';
+        targetFolder = 'avatar';
+    } else if (folderType === 'HoaDon') { 
+        targetFolder = 'HoaDon';
     }
 
     // Quy hoạch cấu trúc cây thư mục sạch sẽ song song tại gốc Bucket R2
