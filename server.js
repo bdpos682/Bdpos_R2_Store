@@ -48,6 +48,8 @@ app.get('/v1/storage/presign', async (req, res) => {
         targetFolder = 'avatar';
     } else if (folderType === 'HoaDon') { 
         targetFolder = 'HoaDon';
+    } else if (folderType === 'chung_tu_doi_soat') { 
+        targetFolder = 'chung_tu_doi_soat'; 
     }
 
     // Quy hoạch cấu trúc cây thư mục sạch sẽ song song tại gốc Bucket R2
